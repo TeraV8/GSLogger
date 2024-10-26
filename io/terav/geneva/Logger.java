@@ -251,6 +251,7 @@ public class Logger {
             if (line.length() == 1023) flushLine();
         }
         private void flushLine() throws IOException {
+            if (line == null) return;
             log(logLevel, line);
             line = null;
         }
@@ -258,6 +259,7 @@ public class Logger {
     private class LogFlusher implements Runnable {
         @Override
         public void run() {
+            Runtime.getRuntime().addShutdownHook(new Thread(this::forceFlush));
             while (true) {
                 try { Thread.sleep(3000); } catch (InterruptedException e) {}
                 for (LinkedStream s : channels)
@@ -268,6 +270,15 @@ public class Logger {
                         } catch (IOException e) {}
                     }
             }
+        }
+        private void forceFlush() {
+            for (LinkedStream s : channels)
+                if (s.flush) {
+                    s.flush = false;
+                    try {
+                        s.stream.flush();
+                    } catch (IOException ioe) {}
+                }
         }
     }
 }
